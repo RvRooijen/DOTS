@@ -17,7 +17,7 @@ public class Main : MonoBehaviour
     [SerializeField]
     private Mesh quadMesh;
 
-    private static EntityManager entityManager;
+    private static EntityManager _entityManager;
 
     public float WorldSize = 1;
 
@@ -26,6 +26,9 @@ public class Main : MonoBehaviour
     [SerializeField]
     private TextMeshProUGUI EntityCountText;
 
+    private World _defaultWorld;
+    private List<ComponentSystemBase> _systems;
+    
     public int EntityCount
     {
         get => entityCount;
@@ -38,8 +41,13 @@ public class Main : MonoBehaviour
 
     void Start()
     {
-        entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
+        _systems = new List<ComponentSystemBase>();
+        _defaultWorld = World.DefaultGameObjectInjectionWorld;
+        _entityManager = _defaultWorld.EntityManager;
 
+        _systems.Add(_defaultWorld.GetOrCreateSystem<FindTargetJobSystem>());
+        _systems.Add(_defaultWorld.GetOrCreateSystem<UnitMoveToTargetJobSystem>());
+        
         for (int i = 0; i < 5000; i++)
         {
             SpawnUnitEntity();
@@ -54,7 +62,12 @@ public class Main : MonoBehaviour
     private float spawnTimer;
     private void Update()
     {
-        EntityCount = entityManager.GetAllEntities().Length;
+        for (int i = 0; i < _systems.Count; i++)
+        {
+            _systems[i].Update();
+        }
+        
+        EntityCount = _entityManager.GetAllEntities().Length;
         
         spawnTimer -= Time.deltaTime;
         if (spawnTimer < 0)
@@ -75,7 +88,7 @@ public class Main : MonoBehaviour
 
     private void SpawnUnitEntity(float3 position)
     {
-        Entity entity = entityManager.CreateEntity(
+        Entity entity = _entityManager.CreateEntity(
             typeof(Translation),
             typeof(LocalToWorld),
             typeof(RenderMesh),
@@ -84,12 +97,12 @@ public class Main : MonoBehaviour
             typeof(Unit)
         );
         SetEntityComponentData(entity, position, quadMesh, unitMaterial);
-        entityManager.SetComponentData(entity, new Scale {Value = 1.5f});
+        _entityManager.SetComponentData(entity, new Scale {Value = 1.5f});
     }
 
     private void SpawnTargetEntity()
     {
-        Entity entity = entityManager.CreateEntity(
+        Entity entity = _entityManager.CreateEntity(
             typeof(Translation),
             typeof(LocalToWorld),
             typeof(RenderMesh),
@@ -98,18 +111,18 @@ public class Main : MonoBehaviour
             typeof(Target)
         );
         SetEntityComponentData(entity, new float3(UnityEngine.Random.Range(-12f,12f), UnityEngine.Random.Range(-8f,8f), UnityEngine.Random.Range(-10f,10f)) * WorldSize, quadMesh, targetMaterial);
-        entityManager.SetComponentData(entity, new Scale {Value = 0.5f});
+        _entityManager.SetComponentData(entity, new Scale {Value = 0.5f});
     }
     
     private void SetEntityComponentData(Entity entity, float3 spawnPosition, Mesh mesh, Material material)
     {
-        entityManager.SetSharedComponentData(entity, new RenderMesh()
+        _entityManager.SetSharedComponentData(entity, new RenderMesh()
         {
             material = material,
             mesh = mesh
         });
         
-        entityManager.SetComponentData(entity, 
+        _entityManager.SetComponentData(entity, 
             new Translation
             {
                 Value = spawnPosition

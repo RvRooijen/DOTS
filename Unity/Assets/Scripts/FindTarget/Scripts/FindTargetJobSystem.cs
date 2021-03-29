@@ -4,6 +4,7 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Transforms;
 
+[DisableAutoCreation]
 public class FindTargetJobSystem : JobComponentSystem
 {
     private struct EntityWithPosition
